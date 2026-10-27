@@ -1,0 +1,19 @@
+# Render Blueprint — New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: bhasharadar
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to India
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL        # paste your Neon connection string
+        sync: false
+      - key: APP_PASSWORD        # the password for the login page
+        sync: false
+      - key: BR_SECRET_KEY       # signs your login and encrypts saved keys; never change it
+        generateValue: true
+      - key: BR_CONTACT_EMAIL    # optional: sent to job APIs as a polite contact
+        sync: false

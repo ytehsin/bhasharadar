@@ -1,0 +1,24 @@
+{
+ "apiVersion": "2",
+ "jobCount": 1,
+ "jobs": [
+  {
+   "id": 9001,
+   "url": "https://jobicy.com/jobs/9001-hindi-linguist",
+   "jobSlug": "hindi-linguist",
+   "jobTitle": "Hindi Linguist",
+   "companyName": "LinguaWorks Inc.",
+   "jobIndustry": [
+    "Copywriting &amp; Content"
+   ],
+   "jobType": [
+    "Freelance"
+   ],
+   "jobGeo": "India",
+   "jobLevel": "Any",
+   "jobExcerpt": "Hindi linguist",
+   "jobDescription": "<p>We need a native Hindi linguist for English to Hindi translation and proofreading.</p>",
+   "pubDate": "2026-10-24T14:26:57+00:00"
+  }
+ ]
+}

@@ -1,0 +1,35 @@
+{
+ "updatedAt": 1793111217,
+ "offset": 0,
+ "limit": 20,
+ "totalCount": 1,
+ "jobs": [
+  {
+   "title": "Hindi Language Specialist \u2013 AI Model Evaluation",
+   "excerpt": "Evaluate AI responses in Hindi",
+   "companyName": "EvalAI",
+   "companySlug": "evalai",
+   "employmentType": "Contractor",
+   "minSalary": 20000,
+   "maxSalary": 30000,
+   "currency": "USD",
+   "salaryPeriod": "year",
+   "seniority": [
+    "Mid-level"
+   ],
+   "locationRestrictions": [],
+   "timezoneRestrictions": [],
+   "categories": [
+    "AI Training"
+   ],
+   "parentCategories": [
+    "Data"
+   ],
+   "description": "<p>Review and rate LLM / chatbot responses written in Hindi for accuracy, fluency and safety. Annotate errors, write reference answers, follow detailed evaluation guidelines. Experience with linguistic quality assessment or translation is a plus.</p>",
+   "pubDate": 1792938417,
+   "expiryDate": 1795703217,
+   "applicationLink": "https://himalayas.app/companies/evalai/jobs/hindi-language-specialist",
+   "guid": "https://himalayas.app/companies/evalai/jobs/hindi-language-specialist"
+  }
+ ]
+}

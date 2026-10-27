@@ -1,0 +1,19 @@
+{
+ "jobs": [
+  {
+   "id": 1,
+   "title": "Software Engineer, Infrastructure",
+   "absolute_url": "https://job-boards.greenhouse.io/scaleai/jobs/1",
+   "location": {
+    "name": "San Francisco, CA"
+   },
+   "updated_at": "2026-10-26T14:26:57",
+   "content": "&lt;p&gt;Build infra in Go and Python.&lt;/p&gt;",
+   "departments": [],
+   "offices": []
+  }
+ ],
+ "meta": {
+  "total": 1
+ }
+}

@@ -1,0 +1,40 @@
+{
+ "data": [
+  {
+   "slug": "buchhalter-1",
+   "company_name": "FinanzGmbH",
+   "title": "Buchhalter (m/w/d)",
+   "description": "<p>Buchhaltung</p>",
+   "remote": false,
+   "url": "https://www.arbeitnow.com/jobs/buchhalter-1",
+   "tags": [
+    "finance"
+   ],
+   "job_types": [
+    "full time"
+   ],
+   "location": "Berlin",
+   "created_at": 1793024817
+  },
+  {
+   "slug": "loc-qa-2",
+   "company_name": "GameStudio",
+   "title": "Localization QA Tester (Hindi)",
+   "description": "<p>Onsite localization testing of game UI in Hindi. Linguistic testing, bug reporting in JIRA.</p>",
+   "remote": false,
+   "url": "https://www.arbeitnow.com/jobs/loc-qa-2",
+   "tags": [
+    "localization"
+   ],
+   "job_types": [
+    "full time"
+   ],
+   "location": "Berlin, Germany",
+   "created_at": 1792938417
+  }
+ ],
+ "links": {
+  "next": null
+ },
+ "meta": {}
+}

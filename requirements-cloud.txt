@@ -1,0 +1,5 @@
+# Everything the hosted (Linux) version needs
+-r requirements.txt
+psycopg[binary]>=3.2
+cryptography>=42
+scikit-learn>=1.4

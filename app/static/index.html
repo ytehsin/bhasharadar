@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BhashaRadar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="top">
+  <h1 class="brand"><span class="dev">भाषा</span>radar<i class="spark" aria-hidden="true">✦</i></h1>
+  <nav class="tabs" aria-label="Sections">
+    <button data-view="jobs" aria-selected="true">Jobs</button>
+    <button data-view="tracker">Tracker</button>
+    <button data-view="outreach">Outreach</button>
+    <button data-view="sources">Sources</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+  <div class="status-pills">
+    <button class="pill" id="pill-resume" data-goto="settings"><span class="dot"></span><span>Resume</span></button>
+    <button class="pill" id="pill-sources" data-goto="sources"><span class="dot"></span><span>Sources</span></button>
+    <button class="pill" id="pill-outreach" data-goto="outreach"><span class="dot"></span><span>Outreach</span></button>
+    <button class="stop-btn" id="stop-all" title="Stop the running search and all queued emails">Stop</button>
+    <form method="post" action="/logout" id="logout-form" hidden><button class="pill" type="submit" title="Log out">Log out</button></form>
+  </div>
+</header>
+
+<main>
+  <!-- ======================= JOBS ======================= -->
+  <section class="view" id="view-jobs">
+    <div id="resume-notice"></div>
+    <form class="search" id="search-form" autocomplete="off">
+      <div class="search-head">
+        <div>
+          <h2>Hindi work that fits you</h2>
+          <p class="sub" id="search-sub">Searches every source, skips duplicates, ranks by your resume.</p>
+        </div>
+        <button class="go" id="go" type="submit" aria-label="GO — start searching"><span>GO</span></button>
+      </div>
+      <div class="grid">
+        <div class="field wide"><span class="lbl">Roles</span><div class="ms" id="f-categories"></div></div>
+        <div class="field"><span class="lbl">Where</span><div class="ms" id="f-locations"></div></div>
+        <div class="field"><span class="lbl">Work mode</span><div class="ms" id="f-workmodes"></div></div>
+      </div>
+      <details class="more-filters">
+        <summary>More filters</summary>
+        <div class="grid">
+          <div class="field"><span class="lbl">Job type</span><div class="ms" id="f-jobtypes"></div></div>
+          <div class="field"><label for="f-exp">Level</label><select id="f-exp"></select></div>
+          <div class="field"><label for="f-score">Min match</label>
+            <select id="f-score"><option value="0">Show all</option><option value="50">50+ possible</option><option value="65">65+ strong</option><option value="80">80+ excellent</option></select></div>
+          <div class="field"><label for="f-days">Posted</label>
+            <select id="f-days"><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="0">Any time</option></select></div>
+          <div class="field"><label for="f-salary">Min salary (USD/yr, approx.)</label><input id="f-salary" type="number" min="0" step="1000" placeholder="Any"></div>
+          <div class="field wide"><label for="f-keywords">Extra keywords</label><input id="f-keywords" placeholder="e.g. subtitling, voice assistant"></div>
+          <div class="field"><label for="cmd">Command</label><input id="cmd" placeholder="GO or STOP" aria-describedby="cmd-hint"><span class="small" id="cmd-hint">Type GO or STOP, then Enter</span></div>
+        </div>
+      </details>
+    </form>
+
+    <div class="quick" id="quick" role="group" aria-label="Quick filters"></div>
+    <div id="progress"></div>
+
+    <div class="results-head">
+      <h3>Matches</h3><span class="count" id="count"></span>
+      <div class="sort"><label for="sort">Sort</label>
+        <select id="sort"><option value="score">Best match</option><option value="newest">Newest</option><option value="salary">Salary</option><option value="deadline">Deadline</option></select>
+      </div>
+    </div>
+    <ul class="rows" id="rows"></ul>
+    <div id="hidden-note"></div>
+    <div class="pager" id="pager"></div>
+  </section>
+
+  <!-- ======================= TRACKER ======================= -->
+  <section class="view" id="view-tracker" hidden>
+    <h2 class="view-title">Applications</h2>
+    <div class="panel">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="tr-filter" aria-label="Filter by status"></select>
+        <span style="margin-left:auto"></span>
+        <a class="btn" href="/api/export/applications.csv">Export CSV</a>
+        <a class="btn" href="/api/export/applications.xlsx">Export Excel</a>
+      </div>
+      <div class="table-wrap"><table class="t" id="tr-table"></table></div>
+    </div>
+  </section>
+
+  <!-- ======================= OUTREACH ======================= -->
+  <section class="view" id="view-outreach" hidden>
+    <h2 class="view-title">Email outreach</h2>
+    <div id="out-stop"></div>
+    <div class="panel">
+      <h3>Sending mode</h3>
+      <p class="hint">Recipients are only addresses published in the job posting or typed by you — never guessed.</p>
+      <div class="mode-opts" id="out-modes"></div>
+    </div>
+    <div class="panel">
+      <h3>Email account</h3>
+      <p class="hint" id="out-account"></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="out-smtp">Set up SMTP (app password)</button>
+        <a class="btn" href="/api/email/oauth/google/start" target="_blank" rel="noopener">Connect Gmail</a>
+        <button class="btn" id="out-test">Send test email to myself</button>
+      </div>
+    </div>
+    <details class="panel fold">
+      <summary><h3>Rules for automatic sending</h3></summary>
+      <p class="hint">Applied to every queued email. Automatic mode can't be switched on until these are set.</p>
+      <form class="form-grid" id="out-rules"></form>
+      <div style="margin-top:12px"><button class="btn primary" id="out-save">Save rules</button></div>
+    </details>
+    <div class="panel">
+      <h3>Messages</h3>
+      <div class="table-wrap"><table class="t" id="out-table"></table></div>
+    </div>
+    <details class="panel fold">
+      <summary><h3>Do-not-contact list</h3></summary>
+      <p class="hint">Anyone who asks not to be contacted goes here. They will never be emailed again.</p>
+      <div style="display:flex;gap:8px"><input type="text" id="optout-email" placeholder="name@company.com" aria-label="Email to block"><button class="btn" id="optout-add">Add</button></div>
+      <ul class="plain small" id="optout-list"></ul>
+    </details>
+  </section>
+
+  <!-- ======================= SOURCES ======================= -->
+  <section class="view" id="view-sources" hidden>
+    <h2 class="view-title">Job sources</h2>
+    <div class="notice info">Only official APIs, public feeds and pages that allow automated reading are queried. Sites without permitted access are listed below as one-click searches.</div>
+    <div class="panel"><div class="table-wrap"><table class="t" id="src-table"></table></div></div>
+    <div class="panel">
+      <h3>Add a source</h3>
+      <p class="hint">Add a company job board (Greenhouse, Lever, Ashby, Workable, SmartRecruiters), an RSS feed, or a career page URL.</p>
+      <form class="form-grid" id="src-add">
+        <div><label for="sa-kind">Type</label><select id="sa-kind">
+          <option value="greenhouse">Greenhouse board</option><option value="lever">Lever board</option><option value="ashby">Ashby board</option>
+          <option value="workable">Workable account</option><option value="smartrecruiters">SmartRecruiters company</option>
+          <option value="rss">RSS / Atom feed</option><option value="careers">Career page URL</option></select></div>
+        <div><label for="sa-name">Name</label><input id="sa-name" placeholder="e.g. Acme Localization"></div>
+        <div class="full"><label for="sa-value" id="sa-value-lbl">Board token</label><input id="sa-value" placeholder="e.g. acmelocalization (from boards.greenhouse.io/acmelocalization)"></div>
+        <div class="full"><button class="btn primary" type="submit">Add source</button></div>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>Search manually</h3>
+      <p class="hint">These sites don't allow automated access. Each link opens a search for <input type="text" id="ml-q" value="Hindi translator" style="width:200px;display:inline-block" aria-label="Manual search query">.</p>
+      <ul class="plain" id="manual-links"></ul>
+    </div>
+  </section>
+
+  <!-- ======================= SETTINGS ======================= -->
+  <section class="view" id="view-settings" hidden>
+    <h2 class="view-title">Settings</h2>
+    <div class="panel">
+      <h3>Resume</h3>
+      <p class="hint" id="resume-status"></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label class="btn primary" for="resume-file" style="cursor:pointer">Upload resume (PDF, DOCX, TXT)</label>
+        <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.md" class="sr-only">
+        <button class="btn danger" id="resume-delete">Delete resume data</button>
+      </div>
+      <p class="small">Parsed on this computer only. Nothing is sent to any AI service.</p>
+    </div>
+    <div class="panel">
+      <h3>Your profile</h3>
+      <p class="hint">Extracted from your resume. Correct anything that was missed, then re-score existing jobs.</p>
+      <form class="form-grid" id="profile-form"></form>
+      <div id="profile-notes"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="profile-save">Save profile</button><button class="btn" id="rescore">Re-score all jobs</button></div>
+    </div>
+    <details class="panel fold">
+      <summary><h3>Match scoring weights</h3></summary>
+      <p class="hint">How much each part counts toward the 100-point score.</p>
+      <form class="form-grid" id="weights-form"></form>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="use-emb"> Use local embeddings (needs the optional sentence-transformers package)</label>
+      <div style="margin-top:12px;display:flex;gap:8px"><button class="btn primary" id="weights-save">Save weights</button><button class="btn" id="weights-reset">Reset to defaults</button></div>
+    </details>
+    <details class="panel fold">
+      <summary><h3>API keys</h3></summary>
+      <p class="hint">Stored encrypted on this computer. Values are never shown again after saving.</p>
+      <div class="table-wrap"><table class="t" id="keys-table"></table></div>
+    </details>
+    <details class="panel fold">
+      <summary><h3>Daily search</h3></summary>
+      <p class="hint">Off by default — searches only run when you press GO.</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="check"><input type="checkbox" id="sch-on"> Run a search every day at</label>
+        <input type="time" id="sch-time" style="width:auto">
+        <button class="btn" id="sch-save">Save</button>
+      </div>
+    </details>
+    <details class="panel fold">
+      <summary><h3>Privacy</h3></summary>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn danger" id="del-history">Delete search history</button>
+        <button class="btn danger" id="del-all">Delete history, tracker and emails</button>
+      </div>
+      <details class="more" style="margin-top:14px"><summary>Activity log</summary><div class="table-wrap"><table class="t" id="audit-table"></table></div></details>
+    </details>
+  </section>
+</main>
+
+<div id="drawer-root"></div>
+<dialog id="dlg"><div class="dlg" id="dlg-body"></div></dialog>
+<script src="/static/app.js"></script>
+</body>
+</html>

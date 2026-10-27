@@ -1,0 +1,24 @@
+[
+ {
+  "last_updated": 1793111217,
+  "legal": "API Terms of Service: link back to Remote OK"
+ },
+ {
+  "id": "55",
+  "slug": "multilingual-annotator",
+  "epoch": 1792679217,
+  "date": "2026-10-22T14:26:57+00:00",
+  "company": "AnnoteHQ",
+  "position": "Multilingual Data Annotator (Hindi, Bengali)",
+  "tags": [
+   "annotation",
+   "ai"
+  ],
+  "description": "<p>Annotate Hindi and Bengali text for NER and sentiment. Data labeling experience preferred.</p>",
+  "location": "Worldwide",
+  "salary_min": 0,
+  "salary_max": 0,
+  "url": "https://remoteok.com/remote-jobs/55",
+  "apply_url": "https://remoteok.com/remote-jobs/55"
+ }
+]

@@ -1,0 +1,33 @@
+PRIYA SHARMA
+Hindi Localization & AI Language Specialist
+Ghaziabad, Uttar Pradesh, India | priya.sharma@example.com | +91 98765 43210
+
+PROFESSIONAL SUMMARY
+Hindi language professional with 7 years of experience in English to Hindi translation, linguistic QA, and AI training data evaluation.
+
+WORK EXPERIENCE
+Lead Hindi Reviewer | VoiceData Labs
+Jan 2022 - Present
+• Lead reviewer for Hindi LLM response evaluation and RLHF preference ranking; trained 8 new reviewers
+• Evaluated 12,000+ Hindi audio transcription and speech data tasks with 98% quality score
+Hindi Translator and LQA Specialist | LinguaBridge Localization Pvt Ltd
+Jun 2018 - Dec 2021
+• English to Hindi translation and transcreation for fintech, banking and insurance clients
+• Linguistic quality assurance (LQA), proofreading and terminology management using SDL Trados, memoQ and Xbench
+Sub-Editor | Dainik Samachar
+Jul 2017 - May 2018
+• Edited Hindi news copy; journalism and content writing
+
+EDUCATION
+Master of Journalism and Mass Communication (MJMC), Delhi University, 2017
+B.A. Hindi Literature, 2015
+
+SKILLS
+Translation, Localization, LQA, Proofreading, Data annotation, Prompt writing, Project coordination, Excel
+
+LANGUAGES
+Hindi - Native
+English - Fluent (C1)
+
+CERTIFICATIONS
+Certificate in Translation Studies, IGNOU

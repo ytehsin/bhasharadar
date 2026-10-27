@@ -1,0 +1,43 @@
+[
+ {
+  "id": "9a968e27",
+  "text": "Hindi Linguistic QA Tester (Part-Time)",
+  "hostedUrl": "https://jobs.lever.co/weloglobal/9a968e27",
+  "applyUrl": "https://jobs.lever.co/weloglobal/9a968e27/apply",
+  "categories": {
+   "location": "Gurugram, India",
+   "commitment": "Part-time",
+   "team": "Linguistic Services",
+   "allLocations": [
+    "Gurugram, India"
+   ]
+  },
+  "workplaceType": "hybrid",
+  "country": "IN",
+  "createdAt": 1792765617614,
+  "descriptionPlain": "Perform linguistic QA and localization testing of Hindi software UI. Report bugs, check terminology consistency and style guide compliance.",
+  "lists": [
+   {
+    "text": "Requirements",
+    "content": "<li>2+ years of LQA or localization testing experience</li><li>Native Hindi</li>"
+   }
+  ],
+  "additionalPlain": ""
+ },
+ {
+  "id": "77d9d9f9",
+  "text": "Senior Linguist-Oriya-India (Freelance)",
+  "hostedUrl": "https://jobs.lever.co/weloglobal/77d9d9f9",
+  "applyUrl": "https://jobs.lever.co/weloglobal/77d9d9f9/apply",
+  "categories": {
+   "location": "India",
+   "commitment": "Freelance"
+  },
+  "workplaceType": "remote",
+  "country": "IN",
+  "createdAt": 1792765617614,
+  "descriptionPlain": "Native Oriya (Odia) linguist for translation review and LQA.",
+  "lists": [],
+  "additionalPlain": ""
+ }
+]

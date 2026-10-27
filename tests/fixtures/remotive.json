@@ -1,0 +1,55 @@
+{
+ "0-legal-notice": "...",
+ "job-count": 4,
+ "jobs": [
+  {
+   "id": 101,
+   "url": "https://remotive.com/remote-jobs/writing/hindi-linguist-101",
+   "title": "Hindi Linguist (Freelance)",
+   "company_name": "LinguaWorks",
+   "company_logo": "",
+   "category": "Writing",
+   "job_type": "freelance",
+   "publication_date": "2026-10-24T14:26:57",
+   "candidate_required_location": "India",
+   "salary": "$15 - $25 per hour",
+   "description": "<p>We need a native <b>Hindi</b> linguist for English to Hindi translation, proofreading and linguistic QA (LQA) of fintech and banking apps.</p><ul><li>3+ years of translation experience</li><li>Experience with Trados or memoQ</li><li>Terminology management and style guide adherence</li></ul>"
+  },
+  {
+   "id": 102,
+   "url": "https://remotive.com/remote-jobs/dev/sse-102",
+   "title": "Senior Software Engineer",
+   "company_name": "DevCo",
+   "category": "Software Development",
+   "job_type": "full_time",
+   "publication_date": "2026-10-25T14:26:57",
+   "candidate_required_location": "Worldwide",
+   "salary": "",
+   "description": "<p>Python, Kubernetes, 6+ years of backend experience.</p>"
+  },
+  {
+   "id": 103,
+   "url": "https://remotive.com/remote-jobs/writing/ja-103",
+   "title": "Japanese Translator",
+   "company_name": "TransJP",
+   "category": "Writing",
+   "job_type": "contract",
+   "publication_date": "2026-10-23T14:26:57",
+   "candidate_required_location": "Worldwide",
+   "salary": "",
+   "description": "<p>Native Japanese translator for English to Japanese localization of games.</p>"
+  },
+  {
+   "id": 104,
+   "url": "https://remotive.com/remote-jobs/ai/hindi-ai-104",
+   "title": "Hindi AI Trainer",
+   "company_name": "DataLab US",
+   "category": "AI",
+   "job_type": "contract",
+   "publication_date": "2026-10-26T14:26:57",
+   "candidate_required_location": "USA Only",
+   "salary": "",
+   "description": "<p>Evaluate LLM responses in Hindi, write prompts and rank model outputs (RLHF). Must reside in the US.</p>"
+  }
+ ]
+}
