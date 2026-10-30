@@ -42,6 +42,23 @@ COMPLETE_LISTING_SOURCES = {"greenhouse", "lever", "ashby", "workable", "smartre
 SOURCE_TIMEOUT_S = 180
 
 
+def _run_isolated(conn, template: HttpClient, queries, filters, cancel: asyncio.Event):
+    """Run one connector to completion on a private event loop in the current (worker) thread."""
+
+    async def inner():
+        http = HttpClient(timeout=template._client.timeout.read or config.HTTP_TIMEOUT, max_retries=template.max_retries,
+                          cache_ttl=template.cache_ttl, backoff_base=template.backoff_base,
+                          respect_intervals=template.respect_intervals)
+        conn.prepare(http)
+        ctx = SearchContext(http=http, queries=queries, filters=filters, cancel=cancel)  # only .is_set() is read
+        try:
+            return await asyncio.wait_for(conn.search(ctx), timeout=SOURCE_TIMEOUT_S)
+        finally:
+            await http.aclose()
+
+    return asyncio.run(inner())
+
+
 def get_weights() -> dict[str, float]:
     from .matching_engine import DEFAULT_WEIGHTS
 
@@ -131,8 +148,8 @@ class SearchRun:
         import time as _t
 
         db.execute("DELETE FROM http_cache WHERE fetched_at < ?", (_t.time() - 86400,))  # keep the database small
-        profile, resume_text = get_profile()
-        self.queries = generate(profile, self.filters)
+        profile, resume_text = await asyncio.to_thread(get_profile)
+        self.queries = await asyncio.to_thread(generate, profile, self.filters)
         connectors = enabled_connectors(self.filters.sources or None)
         for c in connectors:
             self.sources[c.source_id] = {"name": c.name, "state": "queued", "fetched": 0, "kept": 0, "error": None}
@@ -140,7 +157,7 @@ class SearchRun:
 
         # ---- search
         self._set_stage("Searching sources")
-        sem = asyncio.Semaphore(config.MAX_CONCURRENCY)
+        sem = asyncio.Semaphore(min(config.MAX_CONCURRENCY, 3) if config.CLOUD else config.MAX_CONCURRENCY)
         results: dict[str, list[JobRecord]] = {}
         succeeded: set[str] = set()
 
@@ -151,7 +168,6 @@ class SearchRun:
                     st["state"] = "cancelled"
                     return
                 st["state"] = "running"
-                conn.prepare(http)
                 ctx = SearchContext(http=http, queries=self.queries, filters=self.filters, cancel=self.cancel)
                 configured, why = conn.is_configured()
                 if not configured:
@@ -161,14 +177,22 @@ class SearchRun:
                 try:
                     if conn.missing_keys():
                         raise SkipSource("Needs API key: " + ", ".join(conn.missing_keys()))
-                    jobs = await asyncio.wait_for(conn.search(ctx), timeout=SOURCE_TIMEOUT_S)
-                    results[conn.source_id] = jobs
-                    st.update(state="done", fetched=len(jobs))
+                    # Each source runs in its own thread + event loop, so its JSON parsing and
+                    # HTML clean-up never freeze the web server (Render restarts frozen apps).
+                    jobs = await asyncio.to_thread(_run_isolated, conn, http, self.queries, self.filters, self.cancel)
+                    fetched = len(jobs)
+                    # Filter now, off the event loop, so irrelevant listings are freed immediately
+                    kept, dropped = await asyncio.to_thread(self._filter_batch, jobs)
+                    del jobs
+                    results[conn.source_id] = kept
+                    self.stats["discovered"] += fetched
+                    self.stats["filtered_out"] += dropped
+                    st.update(state="done", fetched=fetched, kept=len(kept))
                     errs = getattr(conn, "board_errors", None)
                     if errs:
                         st["warning"] = "; ".join(f"{k}: {v}" for k, v in errs.items())[:300]
                     succeeded.add(conn.source_id)
-                    record_result(conn.source_id, ok=True, count=len(jobs))
+                    record_result(conn.source_id, ok=True, count=fetched)
                 except SkipSource as exc:
                     st.update(state="skipped", error=str(exc))
                     record_result(conn.source_id, ok=False, error=str(exc), health="needs_key")
@@ -188,27 +212,15 @@ class SearchRun:
         if self.cancel.is_set():
             return
 
-        # ---- process / filter
+        # ---- process (already filtered per source above)
         self._set_stage("Processing job listings")
-        all_jobs: list[JobRecord] = []
-        for sid, jobs in results.items():
-            kept = 0
-            for j in jobs:
-                self.stats["discovered"] += 1
-                if not quick_relevance(j):
-                    self.stats["filtered_out"] += 1
-                    continue
-                if not self._passes_hard_filters(j):
-                    self.stats["filtered_out"] += 1
-                    continue
-                kept += 1
-                all_jobs.append(j)
-            self.sources[sid]["kept"] = kept
+        all_jobs: list[JobRecord] = [j for jobs in results.values() for j in jobs]
+        results.clear()
         self.stats["relevant"] = len(all_jobs)
 
         # ---- dedupe
         self._set_stage("Removing duplicates")
-        unique, dupes, dup_count, repeats = dedupe_batch(all_jobs)
+        unique, dupes, dup_count, repeats = await asyncio.to_thread(dedupe_batch, all_jobs)
         self.stats["duplicates_removed"] = dup_count
         self.stats["repeat_hits"] = repeats
         self.stats["relevant"] = len(all_jobs) - repeats
@@ -226,6 +238,10 @@ class SearchRun:
         self.stats["eligible_matches"] = sum(
             1 for m in scored if m["label"] != "Not Eligible" and m["score"] >= max(self.filters.min_score, 50)
         )
+
+    def _filter_batch(self, jobs: list[JobRecord]) -> tuple[list[JobRecord], int]:
+        kept = [j for j in jobs if quick_relevance(j) and self._passes_hard_filters(j)]
+        return kept, len(jobs) - len(kept)
 
     def _passes_hard_filters(self, j: JobRecord) -> bool:
         f = self.filters

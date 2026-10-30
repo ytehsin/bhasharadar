@@ -143,3 +143,22 @@ def test_malformed_record_skipped(api_mock, resume_profile):
     run = run_search()
     assert run.status == "completed"
     assert run.sources["remotive"]["state"] == "done"
+
+
+def test_sources_run_off_the_web_server_thread(api_mock, resume_profile, monkeypatch):
+    """Render restarts an app whose event loop is frozen; sources must run in worker threads."""
+    import threading
+
+    from app.connectors.public_apis import RemotiveConnector
+
+    seen = []
+    orig = RemotiveConnector.search
+
+    async def spy(self, ctx):
+        seen.append(threading.current_thread() is threading.main_thread())
+        return await orig(self, ctx)
+
+    monkeypatch.setattr(RemotiveConnector, "search", spy)
+    run = run_search()
+    assert run.status == "completed" and seen == [False]
+    assert run.sources["remotive"]["kept"] >= 1

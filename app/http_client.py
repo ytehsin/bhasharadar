@@ -78,7 +78,11 @@ class HttpClient:
             return row["body"]
         return None
 
+    MAX_CACHE_BYTES = 1_500_000  # very large responses are not cached (keeps memory and the database small)
+
     def _cache_put(self, key: str, status: int, body: str) -> None:
+        if len(body) > self.MAX_CACHE_BYTES:
+            return
         db.execute(
             "INSERT INTO http_cache(key,fetched_at,status,body) VALUES(?,?,?,?) "
             "ON CONFLICT(key) DO UPDATE SET fetched_at=excluded.fetched_at,status=excluded.status,body=excluded.body",
