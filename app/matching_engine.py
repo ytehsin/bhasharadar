@@ -26,7 +26,7 @@ from . import taxonomy as T
 from .models import JobRecord, Profile, SearchFilters
 from .resume_parser import derive_target_roles
 
-MATCHER_VERSION = "1.3"  # bump when scoring logic changes; stored jobs are re-scored on next start
+MATCHER_VERSION = "1.4"  # bump when scoring logic changes; stored jobs are re-scored on next start
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "skills": 30,
@@ -301,7 +301,7 @@ class Matcher:
             hard.append(loc_note)
         comps["location"] = {"value": loc_factor, "note": loc_note}
         tc = TITLE_COUNTRY.search(job.title)
-        if tc and "India" not in (job.eligible_regions or []) and not re.search(r"\bindia\b", job.title, re.I):
+        if tc and not re.search(r"\bindia\b", job.title, re.I):
             hard.append(f"Role is for people based in {tc.group(1).title()}")
         for name, pat in T.HARD_INELIGIBLE_PATTERNS.items():
             if re.search(pat, low):
@@ -360,7 +360,7 @@ class Matcher:
             reasons.insert(0, "Not clearly a language / AI-data role — capped as Low Match")
         elif not hindi_job and not (title_skills & (T.CORE_SKILLS - {"LLM / AI output evaluation", "Quality control"})):
             # e.g. "Financial Task Design and Evaluation": AI-data flavoured, but not a language job
-            score = min(score, 62)
+            score = min(score, 55)
         caution = [name for name, pat in CAUTION_PATTERNS.items() if pat.search(text[:8000])]
         if caution:
             score = min(score, 40)

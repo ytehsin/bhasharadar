@@ -208,10 +208,10 @@ def test_title_country_rule_and_greenhouse_board_tag(resume_profile):
 
     m = Matcher(resume_profile, fx("sample_resume.txt"))
     fr = N.build(source_id="greenhouse", source_name="G", title="AI Trainer - Advanced Hindi Fluency (France)", company="X",
-                 location="Remote", description="Hindi AI training work.")
+                 location="Remote", description="Hindi AI training work. Open to residents of India, France and more.")
     ind = N.build(source_id="greenhouse", source_name="G", title="AI Trainer - Advanced Hindi Fluency (India)", company="X",
                   location="Remote", description="Hindi AI training work.")
-    assert m.score(fr)["score"] < m.score(ind)["score"]
+    assert m.score(fr)["label"] == "Not Eligible" and m.score(ind)["label"] != "Not Eligible"
     assert N.build(source_id="t", source_name="T", title="Hindi &amp; Urdu Reviewer", company="A &amp; B").title == "Hindi & Urdu Reviewer"
     job = {"tags": json.dumps(["Ops", "gh:eu:prolificacademicltd"]), "source_job_id": "123", "url": "https://example.com/x"}
     assert AM.greenhouse_ref(job) == ("prolificacademicltd", "123", True)
