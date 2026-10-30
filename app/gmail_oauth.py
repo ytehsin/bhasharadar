@@ -25,18 +25,21 @@ SCOPES = "https://www.googleapis.com/auth/gmail.send openid email"
 _cache: dict[str, float | str] = {}
 
 
-def redirect_uri() -> str:
-    return f"{config.PUBLIC_URL}/api/email/oauth/google/callback"
+def redirect_uri(base_url: str | None = None) -> str:
+    """Callback on whichever address you opened the app from (custom domain or onrender.com)."""
+    base = (base_url or config.PUBLIC_URL).rstrip("/")
+    return f"{base}/api/email/oauth/google/callback"
 
 
-def start_url() -> str:
+def start_url(base_url: str | None = None) -> str:
     cid = get_secret("GMAIL_CLIENT_ID")
     if not cid:
         raise RuntimeError("Add GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET in Settings first")
     state = secrets.token_urlsafe(24)
     db.set_setting("gmail_oauth_state", state)
+    db.set_setting("gmail_oauth_redirect", redirect_uri(base_url))
     return AUTH_URL + "?" + urlencode({
-        "client_id": cid, "redirect_uri": redirect_uri(), "response_type": "code", "scope": SCOPES,
+        "client_id": cid, "redirect_uri": redirect_uri(base_url), "response_type": "code", "scope": SCOPES,
         "access_type": "offline", "prompt": "consent", "state": state,
     })
 
@@ -47,7 +50,7 @@ async def handle_callback(code: str, state: str) -> str:
     async with httpx.AsyncClient(timeout=20) as c:
         r = await c.post(TOKEN_URL, data={
             "code": code, "client_id": get_secret("GMAIL_CLIENT_ID"), "client_secret": get_secret("GMAIL_CLIENT_SECRET"),
-            "redirect_uri": redirect_uri(), "grant_type": "authorization_code",
+            "redirect_uri": db.get_setting("gmail_oauth_redirect") or redirect_uri(), "grant_type": "authorization_code",
         })
         if r.status_code != 200:
             raise RuntimeError(f"Token exchange failed (HTTP {r.status_code})")

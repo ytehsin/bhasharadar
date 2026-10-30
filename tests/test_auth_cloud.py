@@ -108,3 +108,17 @@ def test_any_secret_string_encrypts(monkeypatch):
     raw = db.query_one("SELECT value FROM secrets WHERE name='JOOBLE_API_KEY'")["value"]
     assert "abc123" not in raw and raw.startswith("fernet:")
     assert settings_store.get_secret_value("JOOBLE_API_KEY") == "abc123"
+
+
+def test_google_redirect_follows_custom_domain(secured):
+    from app import gmail_oauth
+    from app.settings_store import set_secret
+
+    c = secured
+    c.post("/login", data={"password": "correct horse"})
+    set_secret("GMAIL_CLIENT_ID", "cid.apps.googleusercontent.com")
+    r = c.get("/api/email/oauth/google/start", follow_redirects=False)
+    assert r.status_code == 307
+    assert "redirect_uri=https%3A%2F%2Fbhasharadar.example%2Fapi%2Femail%2Foauth%2Fgoogle%2Fcallback" in r.headers["location"]
+    assert c.get("/api/settings").json()["gmail_redirect_uri"] == "https://bhasharadar.example/api/email/oauth/google/callback"
+    assert gmail_oauth.redirect_uri("https://jobs.yasirtehsin.com") == "https://jobs.yasirtehsin.com/api/email/oauth/google/callback"

@@ -62,7 +62,7 @@ async function refreshStatus() {
   S.cloud = s.cloud;
   const pr = $("#pill-resume"), ps = $("#pill-sources"), po = $("#pill-outreach");
   pr.querySelector(".dot").className = "dot " + (s.profile.verified ? "good" : "warn");
-  pr.lastElementChild.textContent = s.profile.verified ? "Resume ✓" : "Add resume"; pr.title = s.profile.verified ? s.profile.filename : "No resume uploaded yet";
+  pr.lastElementChild.textContent = s.profile.verified ? "Resume on file" : "Add resume"; pr.title = s.profile.verified ? s.profile.filename : "No resume uploaded yet";
   const src = s.sources;
   ps.querySelector(".dot").className = "dot " + (src.error ? "bad" : src.ok ? "good" : "warn");
   ps.lastElementChild.textContent = `${src.ok}/${src.enabled} sources` + (src.error ? ` · ${src.error} down` : ""); ps.title = "Working sources / enabled sources";
@@ -89,7 +89,7 @@ function filters() {
   };
 }
 const QUICK = [
-  ["best", "✦ Best matches"], ["remote", "Remote"], ["freelance", "Freelance & contract"], ["recent", "This week"],
+  ["best", "Best matches"], ["remote", "Remote"], ["freelance", "Freelance & contract"], ["recent", "This week"],
   ["no_upskill", "No new skills"], ["ai", "AI training"], ["localization", "Hindi localization"],
   ["salary", "Pay listed"], ["direct", "Apply direct"],
 ];
@@ -392,6 +392,7 @@ async function loadOutreach() {
   const modes = [["draft_only", "Drafts only", "Nothing is ever sent. Copy drafts and send yourself."], ["review", "Review before sending", "Each email waits for your approval."], ["auto", "Automatic within rules", "Emails that pass every rule below are sent without asking."]];
   $("#out-modes").innerHTML = modes.map(([v, t, d]) => `<label class="mode-opt"><input type="radio" name="mode" value="${v}" ${s.mode === v ? "checked" : ""} class="sr-only"><strong>${t}</strong><span>${d}</span></label>`).join("");
   $$("#out-modes input").forEach((i) => (i.onchange = async () => { try { await api("/api/outreach/settings", { method: "PUT", body: { mode: i.value } }); toast("Mode saved"); refreshStatus(); } catch (e) { fail(e); } loadOutreach(); }));
+  api("/api/settings").then((st) => { $("#out-redirect").textContent = st.gmail_redirect_uri; }).catch(() => {});
   $("#out-account").textContent = s.account_configured ? `Connected (${s.provider === "gmail" ? "Gmail" : "SMTP"}): ${s.from_email}` : S.cloud
     ? "No account connected. Online, use Connect Gmail — SMTP app passwords are blocked by the free host (see DEPLOY.md)."
     : "No account connected. Use an SMTP app password or Connect Gmail (see README).";

@@ -107,15 +107,15 @@ def set_cookie(resp, request: Request) -> None:
 LOGIN_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Log in · BhashaRadar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css"></head>
 <body class="login-body"><main class="login-wrap">
 <form class="search login-card" method="post" action="/login">
-  <h1 class="brand"><span class="dev">भाषा</span>radar<i class="spark" aria-hidden="true">✦</i></h1>
-  <p class="sub">Your Hindi job finder. Enter your password to continue.</p>
+  <h1 class="brand"><span class="dev">भाषा</span>Radar<i class="spark" aria-hidden="true">.</i></h1>
+  <p class="sub">Private job search. Enter your password to continue.</p>
   {error}
   <div class="field"><label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" autofocus required></div>
-  <button class="go login-go" type="submit"><span>Let me in</span></button>
+  <button class="go login-go" type="submit"><span>Enter</span></button>
 </form></main></body></html>"""
 
 

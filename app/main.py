@@ -651,10 +651,14 @@ def suppression() -> list[dict[str, Any]]:
     return db.query("SELECT * FROM suppression ORDER BY created_at DESC")
 
 
+def _base_url(request: Request) -> str:
+    return str(request.base_url).rstrip("/")
+
+
 @app.get("/api/email/oauth/google/start")
-def gmail_start() -> RedirectResponse:
+def gmail_start(request: Request) -> RedirectResponse:
     try:
-        return RedirectResponse(gmail_oauth.start_url())
+        return RedirectResponse(gmail_oauth.start_url(_base_url(request)))
     except RuntimeError as exc:
         raise bad(str(exc), 422)
 
@@ -766,7 +770,7 @@ def get_manual_links(q: str = "Hindi translator") -> list[dict[str, str]]:
 
 # ---------------------------------------------------------------- settings ----
 @app.get("/api/settings")
-def get_settings() -> dict[str, Any]:
+def get_settings(request: Request = None) -> dict[str, Any]:
     return {
         "weights": get_weights(),
         "default_weights": DEFAULT_WEIGHTS,
@@ -775,7 +779,7 @@ def get_settings() -> dict[str, Any]:
         "schedule": scheduler.get_schedule(),
         "form_assist_domains": form_assist.approved_domains(),
         "form_assist_available": form_assist.available(),
-        "gmail_redirect_uri": gmail_oauth.redirect_uri(),
+        "gmail_redirect_uri": gmail_oauth.redirect_uri(_base_url(request) if request else None),
     }
 
 
