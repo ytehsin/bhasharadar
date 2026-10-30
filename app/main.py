@@ -106,9 +106,17 @@ def bad(msg: str, code: int = 400) -> HTTPException:
     return HTTPException(status_code=code, detail=msg)
 
 
+def _asset_version() -> str:
+    """Changes whenever the CSS/JS change, so browsers fetch the new files after an update."""
+    return str(int(max((STATIC_DIR / f).stat().st_mtime for f in ("styles.css", "app.js"))))
+
+
 @app.get("/", response_class=HTMLResponse)
-def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+def index() -> HTMLResponse:
+    v = _asset_version()
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    html = html.replace('/static/styles.css"', f'/static/styles.css?v={v}"').replace('/static/app.js"', f'/static/app.js?v={v}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 # ------------------------------------------------------------------ status ----

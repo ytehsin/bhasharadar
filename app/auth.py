@@ -21,7 +21,7 @@ from . import config
 
 COOKIE = "br_session"
 _fails: dict[str, list[float]] = {}
-OPEN_PATHS = {"/login", "/healthz", "/static/styles.css", "/favicon.ico"}
+OPEN_PATHS = {"/login", "/healthz", "/static/styles.css", "/favicon.ico"}  # query strings are ignored by path matching
 
 _secret = (config.SECRET_KEY or (config.APP_PASSWORD and "pw:" + config.APP_PASSWORD) or secrets.token_hex(32)).encode()
 
@@ -121,4 +121,9 @@ LOGIN_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 
 def login_page(error: str = "") -> HTMLResponse:
     err = f'<div class="notice" role="alert">{error}</div>' if error else ""
-    return HTMLResponse(LOGIN_PAGE.replace("{error}", err), status_code=401 if error else 200)
+    import os
+    from pathlib import Path
+
+    v = int(os.path.getmtime(Path(__file__).parent / "static" / "styles.css"))
+    page = LOGIN_PAGE.replace("{error}", err).replace('/static/styles.css"', f'/static/styles.css?v={v}"')
+    return HTMLResponse(page, status_code=401 if error else 200, headers={"Cache-Control": "no-cache"})
