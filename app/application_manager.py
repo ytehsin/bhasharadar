@@ -323,6 +323,12 @@ def map_question(q: dict[str, Any], p: Profile, cover: str) -> dict[str, Any]:
 
 def greenhouse_ref(job: dict[str, Any]) -> tuple[str, str, bool] | None:
     """(board token, job id, eu) when the posting lives on a Greenhouse board."""
+    tags = job.get("tags")
+    tags = json.loads(tags) if isinstance(tags, str) and tags.startswith("[") else (tags or [])
+    for t in tags:
+        m = re.fullmatch(r"gh:(eu:)?([A-Za-z0-9_-]+)", str(t))
+        if m and str(job.get("source_job_id") or "").isdigit():
+            return m.group(2), str(job["source_job_id"]), bool(m.group(1))
     for u in (job.get("apply_url"), job.get("url")):
         m = re.search(r"(?:job-boards|boards)(\.eu)?\.greenhouse\.io/([A-Za-z0-9_-]+)/jobs/(\d+)", u or "")
         if m:

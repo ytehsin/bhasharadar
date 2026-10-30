@@ -116,6 +116,7 @@ OTHER_REQUIREMENTS: dict[str, list[str]] = {
     "Medical / clinical credential": [r"\bmbbs\b", r"\bmd\b(?! format)", r"registered nurse", r"medical (degree|doctor)", r"physician"],
     "Law degree / bar": [r"\bllb\b", r"\bjd\b", r"law degree", r"bar admission", r"licensed attorney", r"practicing lawyer"],
     "Accounting credential": [r"\bcpa\b", r"chartered accountant", r"\bacca\b"],
+    "Finance / FP&A expertise": [r"\bfp&a\b", r"financial (planning|modeling|modelling|analyst)", r"investment banking", r"\bcfa\b", r"quantitative finance"],
     "Voice acting / recording studio": [r"voice (actor|acting|over artist)", r"studio[- ]quality recording", r"home studio"],
     "Sales / quota": [r"\bquota\b", r"account executive", r"business development representative", r"cold calling"],
     "Native English (US/UK)": [r"native english speaker", r"native[- ]level english \(us\)", r"\b(us|uk) english native"],

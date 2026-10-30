@@ -103,7 +103,11 @@ class GreenhouseConnector(_BoardConnector):
             raws = data.get("jobs", []) or []
         else:
             # Huge boards (e.g. Prolific ~4,000 roles): keep the memory-light path on the free server
-            picks = [j for j in jobs if TITLE_PRIORITY.search(f"{j.get('title', '')} {(j.get('location') or {}).get('name', '')}")]
+            def rank(j):
+                t = f"{j.get('title', '')} {(j.get('location') or {}).get('name', '')}"
+                return (3 if re.search(r"\bindia\b", t, re.I) else 0) + (2 if re.search(r"\b(hindi|urdu|bhojpuri|awadhi)\b", t, re.I) else 0) \
+                    + (1 if TITLE_PRIORITY.search(t) else 0)
+            picks = sorted((j for j in jobs if TITLE_PRIORITY.search(f"{j.get('title', '')} {(j.get('location') or {}).get('name', '')}")), key=rank, reverse=True)
             picks += [j for j in jobs if j not in picks and TITLE_RELEVANT.search(j.get("title", ""))]
             raws = []
             for j in picks[: self.MAX_DETAILS]:
@@ -116,6 +120,7 @@ class GreenhouseConnector(_BoardConnector):
         out = []
         for raw in raws:
             raw["_company"] = raw.get("company_name") or board["company"]
+            raw["_board"] = f"gh:{'eu:' if board['eu'] else ''}{board['token']}"
             job = self.safe_normalize(raw)
             if job:
                 out.append(job)
@@ -136,7 +141,7 @@ class GreenhouseConnector(_BoardConnector):
             url=raw.get("absolute_url"),
             apply_url=raw.get("absolute_url"),
             posted_at=N.to_iso(raw.get("first_published") or raw.get("updated_at")),
-            tags=depts,
+            tags=depts + ([raw["_board"]] if raw.get("_board") else []),
         )
 
 

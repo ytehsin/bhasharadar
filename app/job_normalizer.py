@@ -226,10 +226,12 @@ def annual_usd(amount: float | None, currency: str | None, period: str | None) -
 
 def build(**kw: Any) -> JobRecord:
     """Build a JobRecord, filling derived fields when not given."""
-    title = clean(kw.get("title")) or "Untitled role"
+    title = clean(html.unescape(str(kw.get("title") or ""))) or "Untitled role"
     desc = kw.get("description") or ""
     location = clean(kw.get("location"))
     kw["title"] = title
+    if kw.get("company"):
+        kw["company"] = clean(html.unescape(str(kw["company"])))
     kw["location"] = location
     if not kw.get("remote_type") or kw.get("remote_type") == "unknown":
         kw["remote_type"] = classify_remote(location, title, desc[:1500])
