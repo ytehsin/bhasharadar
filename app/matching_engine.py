@@ -26,7 +26,7 @@ from . import taxonomy as T
 from .models import JobRecord, Profile, SearchFilters
 from .resume_parser import derive_target_roles
 
-MATCHER_VERSION = "1.1"  # bump when scoring logic changes; stored jobs are re-scored on next start
+MATCHER_VERSION = "1.2"  # bump when scoring logic changes; stored jobs are re-scored on next start
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "skills": 30,
@@ -67,6 +67,15 @@ RELATED: dict[str, set[str]] = {
     "AI training": {"LLM / AI output evaluation", "Data annotation"},
     "LLM / AI output evaluation": {"AI training", "Linguistic QA (LQA)"},
 }
+# Postings that look like scams or low-quality "earn from home" ads
+CAUTION_PATTERNS: dict[str, re.Pattern] = {
+    "Asks you to pay a fee": re.compile(r"(registration|joining|training|processing|security|application|onboarding)\s+(fee|deposit|charges?)|pay\s+(a\s+)?(small\s+)?(fee|amount)\s+(to|for|before)", re.I),
+    "Contact only via WhatsApp/Telegram": re.compile(r"(whats\s?app|telegram)\s*(only|me|us|number|@|\+|:)", re.I),
+    "Too-good-to-be-true pay claims": re.compile(r"earn\s+(up\s+to\s+)?(₹|rs\.?|inr|\$)\s?\d[\d,]*\s*(per|a|/)\s*(day|week)|no experience (needed|required).{0,60}(earn|income)", re.I),
+    "Asks for bank or ID details up front": re.compile(r"(send|share|provide)\s+(your\s+)?(bank (account|details)|aadhaar|pan card|passport copy|otp)", re.I),
+    "Personal email domain for a company job": re.compile(r"(apply|send|email)[^\n]{0,40}@(gmail|yahoo|hotmail|outlook|rediffmail)\.com", re.I),
+}
+
 LABEL_THRESHOLDS = [(80, "Excellent Match"), (65, "Strong Match"), (50, "Possible Match"), (0, "Low Match")]
 
 YEARS_REQ = re.compile(
@@ -337,6 +346,10 @@ class Matcher:
         if not in_scope:
             score = min(score, 35)
             reasons.insert(0, "Not clearly a language / AI-data role — capped as Low Match")
+        caution = [name for name, pat in CAUTION_PATTERNS.items() if pat.search(text[:8000])]
+        if caution:
+            score = min(score, 40)
+            reasons.insert(0, "Be careful: " + "; ".join(caution).lower())
         if not lang_ok or hard:
             label = "Not Eligible"
             score = min(score, 25)
@@ -367,6 +380,7 @@ class Matcher:
             "effort": effort,
             "confidence": confidence,
             "in_scope": in_scope,
+            "caution": caution,
             "categories": derive_target_roles(Profile(
                 skills=sorted(job_skills), languages=[{"language": "Hindi", "level": ""}] if hindi_job else []
             )),

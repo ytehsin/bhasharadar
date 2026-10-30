@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from contextlib import asynccontextmanager
 from typing import Any, Optional
 
@@ -293,7 +294,18 @@ def _job_row(r: dict[str, Any], latest_session: str | None, apps: dict[str, dict
         "also_on": db.jload(r["also_on"], []), "upskilling": m.get("upskilling"), "categories": m.get("categories", []),
         "hindi": m.get("hindi"), "application_status": app_row["status_display"] if app_row else None,
         "eligible_regions": db.jload(r["eligible_regions"], []), "effort": m.get("effort"),
+        "direct": _is_direct(r), "caution": m.get("caution") or [],
     }
+
+
+DIRECT_HOSTS = re.compile(r"(greenhouse\.io|lever\.co|ashbyhq\.com|workable\.com|smartrecruiters\.com|teamtailor|careers\.)", re.I)
+
+
+def _is_direct(r: dict[str, Any]) -> bool:
+    """Applying goes straight to the employer's own hiring system (not an aggregator)."""
+    if r["source_id"] in ("greenhouse", "lever", "ashby", "workable", "smartrecruiters", "careers") or r["source_id"].startswith("custom-"):
+        return True
+    return bool(DIRECT_HOSTS.search(r.get("apply_url") or ""))
 
 
 def salary_display(r: dict[str, Any]) -> str | None:
@@ -426,7 +438,7 @@ def _quick_ok(row: dict[str, Any], r: dict[str, Any], qf: set[str], annual: floa
         return False
     if "salary" in qf and not row["salary"]:
         return False
-    if "direct" in qf and r["source_id"] not in ("greenhouse", "lever", "ashby", "workable", "smartrecruiters", "careers") and not r["source_id"].startswith("custom-"):
+    if "direct" in qf and not row["direct"]:
         return False
     return True
 
@@ -572,6 +584,59 @@ def get_tailored_resume(job_id: str) -> Response:
         raise bad(str(exc), 422)
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     headers={"Content-Disposition": "attachment; filename=resume-tailored.docx"})
+
+
+@app.get("/api/answers")
+def get_answers() -> dict[str, Any]:
+    p, _ = get_profile()
+    return {"fields": [{"key": k, "label": l, "placeholder": ph} for k, l, ph in AM.ANSWER_FIELDS],
+            "values": AM.saved_answers(p)}
+
+
+@app.put("/api/answers")
+def put_answers(payload: dict = Body(...)) -> dict[str, Any]:
+    p, _ = get_profile()
+    allowed = {k for k, _, _ in AM.ANSWER_FIELDS}
+    answers = {k: str(v).strip()[:300] for k, v in payload.items() if k in allowed}
+    p.preferences = {**(p.preferences or {}), "answers": answers}
+    st = profile_status()
+    save_profile(p, source="resume" if st["source"] == "resume" else "seed")
+    return get_answers()
+
+
+@app.get("/api/resume/file")
+def resume_file() -> Response:
+    stored = db.get_file("resume")
+    if not stored:
+        raise bad("No resume uploaded yet", 404)
+    name, data = stored
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else "pdf"
+    media = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}.get(ext, "text/plain")
+    p, _ = get_profile()
+    nice = re.sub(r"[^A-Za-z0-9]+", "_", p.name or "Resume").strip("_") or "Resume"
+    return Response(data, media_type=media, headers={"Content-Disposition": f'attachment; filename="{nice}_Resume.{ext}"'})
+
+
+@app.get("/api/jobs/{job_id}/apply-kit")
+async def get_apply_kit(job_id: str) -> dict[str, Any]:
+    job = _job_or_404(job_id)
+    p, _ = get_profile()
+    questions = None
+    ref = AM.greenhouse_ref(job)
+    if ref:
+        token, gid, eu = ref
+        host = "boards-api.eu.greenhouse.io" if eu else "boards-api.greenhouse.io"
+        http = HttpClient(max_retries=1, cache_ttl=86400)
+        try:
+            data = await http.get_json(f"https://{host}/v1/boards/{token}/jobs/{gid}", params={"questions": "true"})
+            questions = (data.get("questions") or []) + (data.get("location_questions") or [])
+        except Exception:
+            questions = None  # the kit still works without the form's questions
+        finally:
+            await http.aclose()
+    kit = AM.apply_kit(job, p, questions)
+    kit["application"] = job_tracker.get_for_job(job_id)
+    return kit
 
 
 @app.post("/api/jobs/{job_id}/form-assist")
@@ -769,6 +834,30 @@ async def source_health(source_id: str) -> dict[str, Any]:
     record_result(source_id, ok=ok, error=None if ok else msg, health="needs_key" if "Needs configuration" in msg else None)
     db.execute("UPDATE sources SET last_error=? WHERE id=?", (msg[:500], source_id))
     return {"ok": ok, "message": msg}
+
+
+@app.get("/api/sources/suggested")
+def suggested_boards() -> list[dict[str, Any]]:
+    from .job_source_registry import discover_boards
+
+    return discover_boards()
+
+
+@app.post("/api/sources/suggested")
+def act_on_suggestion(payload: dict = Body(...)) -> dict[str, bool]:
+    from .job_source_registry import add_board, dismiss_board
+
+    kind, token = str(payload.get("kind", "")), str(payload.get("token", ""))
+    if not re.fullmatch(r"[A-Za-z0-9._%-]{1,80}", token):
+        raise bad("Invalid board name", 422)
+    try:
+        if payload.get("action") == "dismiss":
+            dismiss_board(kind, token)
+        else:
+            add_board(kind, token, str(payload.get("company") or token)[:80])
+    except (ValueError, KeyError) as exc:
+        raise bad(str(exc), 422)
+    return {"ok": True}
 
 
 @app.get("/api/manual-links")

@@ -58,6 +58,12 @@ def api_mock():
         m.get(url__startswith="https://api.lever.co/v0/postings/weloglobal", name="lever_welo").mock(return_value=httpx.Response(200, json=fx("lever_weloglobal.json")))
         m.get(url__startswith="https://api.lever.co/v0/postings/rws", name="lever_rws").mock(return_value=httpx.Response(200, json=fx("lever_rws.json")))
         m.get("https://weworkremotely.com/remote-jobs.rss", name="wwr").mock(return_value=httpx.Response(200, text=fx("wwr.rss")))
+        # newer default boards: reachable, currently empty
+        m.get(url__startswith="https://boards-api.greenhouse.io/v1/boards/prolificacademicltd/jobs", name="gh_prolific").mock(return_value=httpx.Response(200, json={"jobs": []}))
+        m.get(url__startswith="https://api.lever.co/v0/postings/appen", name="lever_appen").mock(return_value=httpx.Response(200, json=[]))
+        m.get(url__startswith="https://apply.workable.com/api/v1/widget/accounts/volga-partners", name="workable_volga").mock(return_value=httpx.Response(200, json={"name": "Volga Partners", "jobs": []}))
+        m.get("https://careers.sigma.ai/jobs.rss", name="sigma").mock(return_value=httpx.Response(200, text="<rss version='2.0'><channel><title>Sigma</title></channel></rss>"))
+        m.route(name="unmocked").mock(return_value=httpx.Response(404))  # any other board/feed: "not found"
         yield m
 
 

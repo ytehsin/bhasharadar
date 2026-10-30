@@ -235,6 +235,12 @@ class SearchRun:
         self._set_stage("Preparing results")
         seen_ids = await asyncio.to_thread(self._store, unique, dupes, scored)
         self.stats["expired_marked"] = await asyncio.to_thread(self._mark_expired, succeeded, seen_ids)
+        try:
+            from .job_source_registry import discover_boards
+
+            self.stats["boards_suggested"] = len(await asyncio.to_thread(discover_boards))
+        except Exception:
+            self.stats["boards_suggested"] = 0
         self.stats["eligible_matches"] = sum(
             1 for m in scored if m["label"] != "Not Eligible" and m["score"] >= max(self.filters.min_score, 50)
         )

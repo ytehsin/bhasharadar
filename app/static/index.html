@@ -6,6 +6,7 @@
 <title>BhashaRadar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet">
+<script>(function(){var t="dark";try{t=localStorage.getItem("br-theme")||"dark"}catch(e){}document.documentElement.setAttribute("data-theme",t)})();</script>
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -22,6 +23,7 @@
     <button class="pill" id="pill-resume" data-goto="settings"><span class="dot"></span><span>Resume</span></button>
     <button class="pill" id="pill-sources" data-goto="sources"><span class="dot"></span><span>Sources</span></button>
     <button class="pill" id="pill-outreach" data-goto="outreach"><span class="dot"></span><span>Outreach</span></button>
+    <button class="theme-btn" id="theme-toggle" type="button" aria-label="Switch colour theme">Light</button>
     <button class="stop-btn" id="stop-all" title="Stop the running search and all queued emails">Stop</button>
     <form method="post" action="/logout" id="logout-form" hidden><button class="pill" type="submit" title="Log out">Log out</button></form>
   </div>
@@ -65,6 +67,7 @@
 
     <div class="results-head">
       <h3>Matches</h3><span class="count" id="count"></span>
+      <button class="btn primary" id="apply-mode" type="button" title="Step through your best unapplied matches one by one">Apply mode</button>
       <div class="sort"><label for="sort">Sort</label>
         <select id="sort"><option value="score">Best match</option><option value="newest">Newest</option><option value="salary">Salary</option><option value="deadline">Deadline</option></select>
       </div>
@@ -130,6 +133,11 @@
     <h2 class="view-title">Job sources</h2>
     <div class="notice info">Only official APIs, public feeds and pages that allow automated reading are queried. Sites without permitted access are listed below as one-click searches.</div>
     <div class="panel"><div class="table-wrap"><table class="t" id="src-table"></table></div></div>
+    <div class="panel" id="suggest-panel" hidden>
+      <h3>Suggested company boards</h3>
+      <p class="hint">Found in your strong matches. Adding a board means future searches read that employer's openings directly.</p>
+      <div class="table-wrap"><table class="t" id="suggest-table"></table></div>
+    </div>
     <div class="panel">
       <h3>Add a source</h3>
       <p class="hint">Add a company job board (Greenhouse, Lever, Ashby, Workable, SmartRecruiters), an RSS feed, or a career page URL.</p>
@@ -169,6 +177,15 @@
       <form class="form-grid" id="profile-form"></form>
       <div id="profile-notes"></div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="profile-save">Save profile</button><button class="btn" id="rescore">Re-score all jobs</button></div>
+    </div>
+    <div class="panel" id="answers-panel">
+      <h3>Application answers</h3>
+      <p class="hint">Fill these in once. The apply kit and the autofill bookmark reuse them on every application. Leave anything blank that you'd rather answer per job.</p>
+      <form class="form-grid" id="answers-form"></form>
+      <div style="margin-top:14px"><button class="btn primary" id="answers-save" type="button">Save answers</button></div>
+      <h3 style="margin-top:28px">Autofill bookmark</h3>
+      <p class="hint">Drag this button to your browser's bookmarks bar (on a computer). On any job application form, click it: it fills your name, email, phone, links and saved answers, and outlines what it filled. It never submits — you check and click Submit yourself. Your details live inside the bookmark, so re-drag it after changing your answers.</p>
+      <p><a class="btn primary" id="bookmarklet" href="#">⇢ BhashaRadar autofill</a> <span class="small" id="bookmarklet-note"></span></p>
     </div>
     <details class="panel fold">
       <summary><h3>Match scoring weights</h3></summary>

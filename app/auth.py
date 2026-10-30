@@ -108,6 +108,7 @@ LOGIN_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Log in · BhashaRadar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet">
+<script>(function(){var t="dark";try{t=localStorage.getItem("br-theme")||"dark"}catch(e){}document.documentElement.setAttribute("data-theme",t)})();</script>
 <link rel="stylesheet" href="/static/styles.css"></head>
 <body class="login-body"><main class="login-wrap">
 <form class="search login-card" method="post" action="/login">

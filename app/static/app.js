@@ -140,7 +140,7 @@ function renderProgress(st) {
   }).join("");
   const x = st.stats || {};
   let summary = "";
-  if (st.status === "completed") summary = `<div class="summary-line"><strong>${x.eligible_matches} matches for you</strong> <span class="small">· ${x.discovered} scanned · ${x.relevant} relevant · ${x.duplicates_removed} duplicates merged · ${x.new} new${x.expired_marked ? ` · ${x.expired_marked} expired` : ""}</span>${x.outreach_queued ? `<div class="small">${x.outreach_queued} emails queued by your automatic rules.</div>` : ""}</div>`;
+  if (st.status === "completed") summary = `<div class="summary-line"><strong>${x.eligible_matches} matches for you</strong> <span class="small">· ${x.discovered} scanned · ${x.relevant} relevant · ${x.duplicates_removed} duplicates merged · ${x.new} new${x.expired_marked ? ` · ${x.expired_marked} expired` : ""}</span>${x.outreach_queued ? `<div class="small">${x.outreach_queued} emails queued by your automatic rules.</div>` : ""}${x.boards_suggested ? `<div class="small">${x.boards_suggested} company job board${x.boards_suggested > 1 ? "s" : ""} found in your matches — <button class="linkish" onclick="show('sources')">review in Sources</button></div>` : ""}</div>`;
   else if (st.status === "cancelled") summary = `<div class="summary-line">Search stopped. <button class="linkish" onclick="resumeSearch('${esc(st.id)}')">Resume it</button></div>`;
   else if (st.status === "failed" || st.status === "interrupted") summary = `<div class="summary-line">Search ${esc(st.status)}${st.error ? ": " + esc(st.error) : ""}. <button class="linkish" onclick="resumeSearch('${esc(st.id)}')">Resume</button></div>`;
   const cancel = st.status === "running" ? ` <button class="linkish" onclick="cancelSearch()">Cancel search</button>` : "";
@@ -187,7 +187,7 @@ async function loadJobs() {
     });
     $$("#rows [data-save]").forEach((b) => (b.onclick = async () => { await api(`/api/jobs/${b.dataset.save}/save?saved=${b.dataset.saved !== "1"}`, { method: "POST" }); loadJobs(); }));
     $$("#rows [data-view]").forEach((b) => (b.onclick = () => openJob(b.dataset.view)));
-    $$("#rows [data-apply]").forEach((b) => (b.onclick = () => applyFlow(b.dataset.apply, b.dataset.url)));
+    $$("#rows [data-apply]").forEach((b) => (b.onclick = () => openKit(b.dataset.apply)));
   }
   const notes = [];
   if (d.hidden_ineligible) notes.push(`<button class="linkish" id="tog-inel">${S.showIneligible ? "Hide" : "Show"} ${S.showIneligible ? "" : d.hidden_ineligible + " "}not-eligible jobs</button>`);
@@ -214,6 +214,8 @@ function row(j) {
     j.is_new && `<span class="tag new">New</span>`,
     j.application_status && `<span class="tag applied">${esc(j.application_status)}</span>`,
     j.status === "expired" && `<span class="tag bad">Expired</span>`,
+    j.caution && j.caution.length && `<span class="tag bad" title="${esc(j.caution.join("; "))}">Caution</span>`,
+    j.direct && `<span class="tag" title="Apply directly on the employer's hiring system">Direct</span>`,
     j.label === "Not Eligible" && `<span class="tag bad">Not eligible</span>`,
   ].filter(Boolean).join(" ");
   return `<li class="row ${j.status === "expired" ? "expired" : ""}" data-id="${j.id}" tabindex="0">
@@ -248,7 +250,7 @@ async function openJob(id) {
     <div class="small">${esc(j.company || "")}${j.status === "expired" ? " · <strong>Expired</strong>" : ""}</div>
     <div class="actions">
       <a class="btn" href="${esc(j.url || "#")}" target="_blank" rel="noopener noreferrer">Open posting</a>
-      <button class="btn primary" id="d-apply">Apply on official page</button>
+      <button class="btn primary" id="d-apply">Apply kit</button>
       <button class="btn" id="d-save">${j.saved ? "Saved" : "Save"}</button>
       <button class="btn" id="d-verify">Check it's still open</button>
       <button class="btn" id="d-hide">Hide</button>
@@ -280,7 +282,7 @@ async function openJob(id) {
     <div class="actions" style="margin-top:0">
       <button class="btn" id="d-cover">Cover letter</button>
       <a class="btn" href="/api/jobs/${j.id}/tailored-resume.docx" id="d-resume">Tailored resume (.docx)</a>
-      <button class="btn" id="d-form">Form answers</button>
+      
       <button class="btn" id="d-assist">Open form with my details</button>
     </div>
     <h4>Email</h4>
@@ -296,13 +298,12 @@ async function openJob(id) {
   $("#dclose").onclick = close; $("#dbg").onclick = close;
   document.addEventListener("keydown", function k(e) { if (e.key === "Escape") { close(); document.removeEventListener("keydown", k); } });
   $("#dclose").focus();
-  $("#d-apply").onclick = () => applyFlow(j.id, j.apply_url || j.url);
+  $("#d-apply").onclick = () => { $("#drawer-root").innerHTML = ""; openKit(j.id); };
   $("#d-save").onclick = async () => { await api(`/api/jobs/${j.id}/save?saved=${!j.saved}`, { method: "POST" }); openJob(j.id); loadJobs(); };
   $("#d-hide").onclick = async () => { await api(`/api/jobs/${j.id}/hide`, { method: "POST" }); close(); loadJobs(); toast("Hidden from results"); };
   $("#d-verify").onclick = async () => { try { const r = await api(`/api/jobs/${j.id}/verify`, { method: "POST" }); toast(r.status === "expired" ? "This posting is gone — marked expired" : r.status === "active" ? "Still online" : `Couldn't confirm (HTTP ${r.http_status ?? "no response"})`); openJob(j.id); loadJobs(); } catch (e) { fail(e); } };
   $("#d-status-save").onclick = () => setStatus(j.id, $("#d-status").value, $("#d-notes").value);
   $("#d-cover").onclick = async () => { const r = await api(`/api/jobs/${j.id}/cover-letter`); textDialog("Cover letter", r.text, r.provisional ? "Drafted from your provisional profile — upload your resume first." : "Built only from your resume. Edit before using."); };
-  $("#d-form").onclick = async () => { const r = await api(`/api/jobs/${j.id}/form-answers`); formDialog(r); };
   $("#d-assist").onclick = async () => { try { const r = await api(`/api/jobs/${j.id}/form-assist`, { method: "POST" }); toast(`Filled: ${r.filled.join(", ") || "nothing"}. Review every field and submit yourself.`); } catch (e) { fail(e); } };
   $("#d-resume").onclick = async (e) => { e.preventDefault(); const r = await fetch(e.currentTarget.href); if (!r.ok) return fail(new Error((await r.json()).detail)); const b = await r.blob(); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "resume-tailored.docx"; a.click(); };
   $$("[data-draft]").forEach((b) => (b.onclick = async () => { try { const msg = await api("/api/outreach/draft", { method: "POST", body: { job_id: j.id, template: b.dataset.draft } }); emailDialog(msg); } catch (e) { fail(e); } }));
@@ -328,7 +329,88 @@ function applyFlow(id, url) {
 }
 
 /* ---------------- dialogs ---------------- */
+
+/* ---------------- apply kit + apply mode ---------------- */
+const Q = { list: [], i: 0, done: 0 };
+const copyBtn = (text) => `<button class="btn copy" data-copy="${esc(text)}" type="button">Copy</button>`;
+function wireCopy(root) {
+  $$("[data-copy]", root).forEach((b) => (b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1200); }
+    catch (e) { toast("Copy failed — select the text instead", true); }
+  }));
+}
+async function openKit(id, inQueue = false) {
+  let k;
+  try { k = await api(`/api/jobs/${id}/apply-kit`); } catch (e) { return fail(e); }
+  const j = k.job;
+  const applied = k.application && ["Applied", "Email Sent", "Interview", "Assessment", "Offer Received"].includes(k.application.status);
+  const drow = (d) => `<tr><th>${esc(d.label)}</th><td>${esc(d.value)}</td><td>${copyBtn(d.value)}</td></tr>`;
+  const rows = k.details.slice(0, 8).map(drow).join("") + (k.details.length > 8 ? `</table><details class="more"><summary>More details (${k.details.length - 8})</summary><table class="t kit-d">${k.details.slice(8).map(drow).join("")}</table></details><table class="t kit-d">` : "");
+  const kindTag = { auto: "", saved: "", draft: `<span class="tag">draft</span>`, file: `<span class="tag">file</span>`, you: `<span class="tag bad">you</span>` };
+  const qs = k.questions.length ? `<h4>Form questions <span class="small">(${esc(k.questions_source)})</span></h4>
+    <table class="t kit-q">${k.questions.map((q) => `<tr><th>${esc(q.label)}${q.required ? " *" : ""} ${kindTag[q.kind] || ""}</th>
+      <td>${q.answer ? `<span class="kit-ans">${esc(q.answer.length > 220 ? q.answer.slice(0, 220) + "…" : q.answer)}</span>` : ""}${q.note ? `<div class="small">${esc(q.note)}</div>` : ""}</td>
+      <td>${q.answer && q.kind !== "file" ? copyBtn(q.answer) : ""}</td></tr>`).join("")}</table>` : "";
+  const progress = inQueue ? `<div class="kit-progress"><span>Apply mode · ${Q.i + 1} of ${Q.list.length}</span><span class="bar-track"><span style="width:${(100 * (Q.i + 1)) / Q.list.length}%"></span></span></div>` : "";
+  dialog(`${progress}
+    <div class="kit-head"><div class="score ${scoreClass(j.label)}">${Math.round(j.score || 0)}</div>
+      <div><h3>${esc(j.title)}</h3><div class="small">${esc(j.company || "")} / via ${esc(j.source || "")}${applied ? " / <strong>already applied</strong>" : ""}</div></div></div>
+    ${k.provisional ? `<div class="notice">Your resume isn't uploaded — these answers come from the provisional profile.</div>` : ""}
+    ${k.missing_saved_answers.length ? `<div class="notice">Save these once to fill forms faster: ${k.missing_saved_answers.map(esc).join(", ")}. <button class="linkish" id="kit-answers">Add answers</button></div>` : ""}
+    <ol class="kit-steps">
+      <li><strong>Open the application</strong>It opens in a new tab. Keep this panel beside it.
+        <div class="dlg-actions left"><a class="btn primary" id="kit-open" href="${esc(j.apply_url || "#")}" target="_blank" rel="noopener noreferrer">Open application ↗</a>
+        ${k.email_apply ? `<button class="btn" id="kit-email">Apply by email (${esc(k.email_apply.email)})</button>` : ""}</div></li>
+      <li><strong>Fill it in</strong>Click your autofill bookmark on the form, or copy from here.
+        <table class="t kit-d">${rows}</table>${qs}</li>
+      <li><strong>Attach documents</strong>
+        <div class="dlg-actions left">${k.resume_on_file ? `<a class="btn" href="/api/resume/file">Download my resume</a>` : `<span class="small">Upload your resume in Settings first.</span>`}
+        <a class="btn" href="/api/jobs/${j.id}/tailored-resume.docx" id="kit-tailored">Tailored resume (.docx)</a>
+        ${copyBtn(k.cover_letter).replace(">Copy<", ">Copy cover letter<")}</div>
+        <details class="more"><summary>Preview cover letter</summary><div class="desc">${esc(k.cover_letter)}</div></details></li>
+      <li><strong>Submit on their site, then record it here.</strong>
+        ${k.needs_you.length ? `<div class="small">Answer yourself: ${k.needs_you.map(esc).join("; ")}</div>` : ""}
+        <input type="text" id="kit-conf" placeholder="Confirmation / reference (optional)">
+      </li>
+    </ol>
+    <div class="dlg-actions">
+      ${inQueue ? `<button class="btn" id="kit-stop">End apply mode</button><button class="btn" id="kit-skip">Skip</button>` : `<button class="btn" data-close>Close</button>`}
+      <button class="btn" id="kit-later">Save for later</button>
+      <button class="btn primary" id="kit-done">${inQueue ? "Applied — next" : "I applied"}</button>
+    </div>`);
+  const root = $("#dlg-body");
+  root.parentElement.classList.add("wide");
+  wireCopy(root);
+  $("#kit-answers")?.addEventListener("click", () => { $("#dlg").close(); show("settings"); setTimeout(() => $("#answers-panel")?.scrollIntoView({ behavior: "smooth" }), 300); });
+  $("#kit-tailored").onclick = async (e) => { e.preventDefault(); const r = await fetch(e.currentTarget.href); if (!r.ok) return fail(new Error((await r.json()).detail)); const b = await r.blob(); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "resume-tailored.docx"; a.click(); };
+  $("#kit-email")?.addEventListener("click", async () => { try { const msg = await api("/api/outreach/draft", { method: "POST", body: { job_id: j.id, template: "application", recipient: k.email_apply.email } }); emailDialog(msg); } catch (e) { fail(e); } });
+  const next = () => { if (!inQueue) { $("#dlg").close(); loadJobs(); return; } Q.i++; if (Q.i >= Q.list.length) { $("#dlg").close(); toast(`Apply mode done — ${Q.done} applied`); loadJobs(); return; } openKit(Q.list[Q.i], true); };
+  $("#kit-done").onclick = async () => {
+    const body = { status: "Applied", method: "Official page", confirmation: $("#kit-conf").value || null };
+    try { await api(`/api/jobs/${j.id}/status`, { method: "POST", body }); }
+    catch (e) {
+      if (/already applied/i.test(e.message)) { if (!confirm(e.message + "\n\nRecord another attempt?")) return; await api(`/api/jobs/${j.id}/status`, { method: "POST", body: { ...body, reapply: true } }); }
+      else return fail(e);
+    }
+    Q.done++; toast("Marked as applied"); next();
+  };
+  $("#kit-later").onclick = async () => { await setStatus(j.id, "Ready to Apply"); next(); };
+  $("#kit-skip")?.addEventListener("click", next);
+  $("#kit-stop")?.addEventListener("click", () => { $("#dlg").close(); loadJobs(); });
+}
+async function startApplyMode() {
+  const f = filters();
+  const p = new URLSearchParams({ categories: f.categories.join("|"), work_modes: f.work_modes.join(","), locations: f.locations.join("|"),
+    quick: [...S.quick].join(","), min_score: Math.max(f.min_score, 60), sort: "score", page: 1, page_size: 100 });
+  const d = await api(`/api/jobs?${p}`);
+  Q.list = d.items.filter((x) => !x.application_status || ["Shortlisted", "Ready to Apply", "Discovered"].includes(x.application_status)).slice(0, 30).map((x) => x.id);
+  Q.i = 0; Q.done = 0;
+  if (!Q.list.length) return toast("No unapplied matches above 60 with these filters", true);
+  openKit(Q.list[0], true);
+}
+
 function dialog(html) {
+  $("#dlg").classList.remove("wide");
   $("#dlg-body").innerHTML = html;
   $$("[data-close]", $("#dlg-body")).forEach((b) => (b.onclick = () => $("#dlg").close()));
   $("#dlg").showModal();
@@ -480,6 +562,17 @@ async function loadSources() {
     try { await api(`/api/sources/${b.dataset.cfgsave}`, { method: "PUT", body: { config: cfg } }); toast("Saved — press Check now to test it"); loadSources(); } catch (e) { fail(e); }
   }));
   loadManualLinks();
+  loadSuggestions();
+}
+async function loadSuggestions() {
+  const list = await api("/api/sources/suggested").catch(() => []);
+  $("#suggest-panel").hidden = !list.length;
+  const KIND = { greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", workable: "Workable", smartrecruiters: "SmartRecruiters" };
+  $("#suggest-table").innerHTML = `<tbody>${list.map((b, i) => `<tr><td><strong>${esc(b.company)}</strong><div class="small">${KIND[b.kind]} · ${esc(b.token)}</div></td>
+    <td class="small">${b.examples.map(esc).join("<br>")}</td><td>best ${Math.round(b.best)}</td>
+    <td style="white-space:nowrap"><button class="btn primary" data-sugg="${i}">Add</button> <button class="linkish" data-dismiss="${i}">Not interested</button></td></tr>`).join("")}</tbody>`;
+  $$("[data-sugg]").forEach((x) => (x.onclick = async () => { const b = list[x.dataset.sugg]; await api("/api/sources/suggested", { method: "POST", body: { kind: b.kind, token: b.token, company: b.company } }); toast(`${b.company} added — it's included from the next search`); loadSources(); }));
+  $$("[data-dismiss]").forEach((x) => (x.onclick = async () => { const b = list[x.dataset.dismiss]; await api("/api/sources/suggested", { method: "POST", body: { kind: b.kind, token: b.token, action: "dismiss" } }); loadSuggestions(); }));
 }
 const SA_LABEL = { greenhouse: ["Board token", "e.g. acme (from boards.greenhouse.io/acme)"], lever: ["Lever site name", "e.g. acme (from jobs.lever.co/acme)"], ashby: ["Ashby board name", "e.g. acme (from jobs.ashbyhq.com/acme)"], workable: ["Workable account", "e.g. acme (from apply.workable.com/acme)"], smartrecruiters: ["Company identifier", "e.g. Acme1 (from jobs.smartrecruiters.com/Acme1)"], rss: ["Feed URL", "https://…/jobs.rss"], careers: ["Career page URL", "https://company.com/careers"] };
 $("#sa-kind").onchange = () => { const [l, p] = SA_LABEL[$("#sa-kind").value]; $("#sa-value-lbl").textContent = l; $("#sa-value").placeholder = p; };
@@ -507,6 +600,7 @@ const PROFILE_FIELDS = [
 ];
 async function loadSettings() {
   const [{ profile: p, status: st }, s] = await Promise.all([api("/api/profile"), api("/api/settings")]);
+  loadAnswers(p).catch(fail);
   $("#resume-status").textContent = st.verified ? `Using ${st.filename}, parsed ${fmtDate(st.updated_at)}.` : "No resume uploaded — a provisional profile from your project brief is being used.";
   $("#profile-form").innerHTML = PROFILE_FIELDS.map(([k, l, t]) => {
     const v = p[k];
@@ -555,6 +649,40 @@ $("#sch-save").onclick = async () => { await api("/api/settings", { method: "PUT
 $("#del-history").onclick = async () => { if (confirm("Delete all search results and history? Tracked applications are kept.")) { await api("/api/data", { method: "DELETE" }); toast("History deleted"); loadJobs(); } };
 $("#del-all").onclick = async () => { if (confirm("Delete ALL jobs, the application tracker and email history? This cannot be undone.")) { await api("/api/data?include_tracker=true", { method: "DELETE" }); toast("Everything deleted"); loadJobs(); } };
 
+
+/* ---------------- saved answers + autofill bookmark ---------------- */
+const BM_SRC = String.raw`(function(){var D=__DATA__;var M=[[/first.?name|given.?name/i,'first'],[/last.?name|surname|family.?name/i,'last'],[/full.?name|^\s*name\s*\*?$|your name|legal name/i,'full'],[/e-?mail/i,'email'],[/phone|mobile/i,'phone'],[/linkedin/i,'linkedin'],[/website|portfolio|personal site|blog/i,'website'],[/\bcity\b/i,'city'],[/country/i,'country'],[/location|address|where are you based/i,'location'],[/notice|start date|when can you start/i,'notice'],[/hear about|how did you find|source/i,'how'],[/hourly rate|expected rate|\brate\b|salary|compensation|pay expectation/i,'rate'],[/authori[sz]ed|right to work|work permit|eligible to work/i,'auth'],[/sponsor/i,'spons'],[/relocat/i,'reloc'],[/years of|how many years/i,'years'],[/time ?zone/i,'tz'],[/availability|hours per week/i,'avail']];function lab(e){var t=[e.name,e.id,e.placeholder,e.getAttribute('aria-label'),e.getAttribute('autocomplete')];if(e.id){var l=document.querySelector('label[for="'+CSS.escape(e.id)+'"]');if(l)t.push(l.innerText)}var p=e.closest('label,.field,.application-question,.form-group,[class*=field],[class*=question]');if(p)t.push((p.innerText||'').slice(0,140));return t.filter(Boolean).join(' ')}function set(e,v){var P=e.tagName=='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(P,'value').set.call(e,v);e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}))}var n=0;document.querySelectorAll('input:not([type=hidden]):not([type=file]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea,select').forEach(function(e){if(e.tagName!='SELECT'&&e.value)return;var L=lab(e);for(var i=0;i<M.length;i++){var v=D[M[i][1]];if(!v||!M[i][0].test(L))continue;if(e.tagName=='SELECT'){var o=[].find.call(e.options,function(o){return o.text.toLowerCase().indexOf(v.toLowerCase())>-1});if(!o)break;e.value=o.value;e.dispatchEvent(new Event('change',{bubbles:true}))}else set(e,v);e.style.outline='2px solid #1A1A1A';n++;break}});var b=document.createElement('div');b.textContent='BhashaRadar filled '+n+' field(s). Check each one, attach your resume, then submit yourself.';b.style.cssText='position:fixed;z-index:2147483647;bottom:16px;right:16px;background:#1A1A1A;color:#FAFAFA;font:13px/1.5 monospace;padding:10px 14px;border-radius:2px;max-width:340px';document.body.appendChild(b);setTimeout(function(){b.remove()},8000)})();`;
+function buildBookmarklet(p, a) {
+  const [first, ...rest] = (p.name || "").split(/\s+/);
+  const D = { first: first || "", last: rest.join(" "), full: p.name || "", email: p.email || "", phone: p.phone || "",
+    linkedin: a.linkedin || "", website: a.website || "", city: a.city || "", country: a.country || "", location: p.location || a.city || "",
+    notice: a.notice_period || "", how: a.how_heard || "", rate: a.rate_hourly || a.salary || "", auth: a.work_authorization || "",
+    spons: a.sponsorship || "", reloc: a.relocation || "", years: p.total_years_experience ? String(p.total_years_experience) : "",
+    tz: a.timezone || "", avail: a.availability || "" };
+  Object.keys(D).forEach((k) => { if (!D[k]) delete D[k]; });
+  return { href: "javascript:" + encodeURIComponent(BM_SRC.replace("__DATA__", JSON.stringify(D))), count: Object.keys(D).length };
+}
+async function loadAnswers(profile) {
+  const r = await api("/api/answers");
+  $("#answers-form").innerHTML = r.fields.map((f) => `<div><label for="ans-${f.key}">${esc(f.label)}</label><input type="text" id="ans-${f.key}" data-ans="${f.key}" value="${esc(r.values[f.key] || "")}" placeholder="${esc(f.placeholder)}"></div>`).join("");
+  const bm = buildBookmarklet(profile, r.values);
+  $("#bookmarklet").href = bm.href;
+  $("#bookmarklet").onclick = (e) => { e.preventDefault(); toast("Drag this button to your bookmarks bar, then click it on an application form"); };
+  $("#bookmarklet-note").textContent = `${bm.count} details included`;
+}
+$("#answers-save").onclick = async () => {
+  const body = {}; $$("[data-ans]").forEach((i) => (body[i.dataset.ans] = i.value));
+  try { await api("/api/answers", { method: "PUT", body }); toast("Answers saved — re-drag the autofill bookmark to update it"); loadSettings(); } catch (e) { fail(e); }
+};
+/* ---------------- theme ---------------- */
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("br-theme", t); } catch (e) {}
+  const b = $("#theme-toggle"); if (b) b.textContent = t === "dark" ? "Light" : "Dark";
+}
+applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
+$("#theme-toggle").onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+
 /* ---------------- boot ---------------- */
 async function init(refreshOnly = false) {
   S.meta = await api("/api/meta");
@@ -567,7 +695,7 @@ async function init(refreshOnly = false) {
   $("#f-exp").innerHTML = S.meta.experience_levels.map((l) => `<option value="${l}">${l === "any" ? "Any level" : l[0].toUpperCase() + l.slice(1)}</option>`).join("");
   ["#f-categories", "#f-jobtypes", "#f-locations", "#f-workmodes"].forEach((s) => $(s).addEventListener("change", () => { S.page = 1; loadJobs(); }));
   $("#search-sub").textContent = defaults.length && !refreshOnly ? `Pre-set to ${defaults.length} roles from your ${last.profile.verified ? "resume" : "profile"}. Tweak anything, then hit GO.` : $("#search-sub").textContent;
-  if (!refreshOnly) renderQuick();
+  if (!refreshOnly) { renderQuick(); $("#apply-mode").onclick = () => startApplyMode().catch(fail); }
   await refreshStatus();
   if (last.search) { renderProgress(last.search); if (last.search.status === "running") poll(); }
   loadJobs();

@@ -15,6 +15,10 @@ from ..models import JobRecord, SearchFilters
 from .base import BaseConnector, SearchContext, SourceMeta
 
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
+# Title filters used to pick which postings of a very large board are worth downloading in full
+TITLE_PRIORITY = re.compile(r"\b(hindi|urdu|bhojpuri|awadhi|maithili|indic|devanagari|india|indian)\b", re.I)
+TITLE_RELEVANT = re.compile(r"\b(linguist\w*|language|translat\w*|locali[sz]\w*|transcri\w*|annotat\w*|evaluat\w*|rater|ai trainer|"
+                            r"proofread\w*|editor|lqa|multilingual|speech|voice|audio|content review\w*)\b", re.I)
 
 
 class _BoardConnector(BaseConnector):
@@ -43,8 +47,8 @@ class _BoardConnector(BaseConnector):
                 break
             try:
                 out.extend(await self.fetch_board(ctx, board))
-            except FetchError as exc:  # one bad board must not sink the others
-                self.board_errors[board["token"]] = str(exc)
+            except Exception as exc:  # one bad board must not sink the others
+                self.board_errors[board["token"]] = f"{type(exc).__name__}: {exc}"[:200]
         if boards and len(self.board_errors) == len(boards):
             raise FetchError("All boards failed: " + "; ".join(f"{k}: {v}" for k, v in self.board_errors.items()))
         return out
@@ -85,12 +89,32 @@ class GreenhouseConnector(_BoardConnector):
         attribution="Company careers page (Greenhouse)",
     )
 
+    LARGE_BOARD = 250  # above this, fetch titles first and details only for likely matches
+    MAX_DETAILS = 45
+
     async def fetch_board(self, ctx, board):
         host = "boards-api.eu.greenhouse.io" if board["eu"] else "boards-api.greenhouse.io"
         url = f"https://{host}/v1/boards/{board['token']}/jobs"
-        data = await ctx.http.get_json(url, params={"content": "true"}, cache_ttl=self.meta.cache_ttl_s)
+        # Light list first (titles + locations only)
+        listing = await ctx.http.get_json(url, cache_ttl=self.meta.cache_ttl_s)
+        jobs = listing.get("jobs", []) or []
+        if len(jobs) <= self.LARGE_BOARD:
+            data = await ctx.http.get_json(url, params={"content": "true"}, cache_ttl=self.meta.cache_ttl_s)
+            raws = data.get("jobs", []) or []
+        else:
+            # Huge boards (e.g. Prolific ~4,000 roles): keep the memory-light path on the free server
+            picks = [j for j in jobs if TITLE_PRIORITY.search(f"{j.get('title', '')} {(j.get('location') or {}).get('name', '')}")]
+            picks += [j for j in jobs if j not in picks and TITLE_RELEVANT.search(j.get("title", ""))]
+            raws = []
+            for j in picks[: self.MAX_DETAILS]:
+                if ctx.cancelled:
+                    break
+                try:
+                    raws.append(await ctx.http.get_json(f"{url}/{j['id']}", cache_ttl=self.meta.cache_ttl_s))
+                except FetchError:
+                    continue
         out = []
-        for raw in data.get("jobs", []) or []:
+        for raw in raws:
             raw["_company"] = raw.get("company_name") or board["company"]
             job = self.safe_normalize(raw)
             if job:
@@ -254,20 +278,20 @@ class WorkableConnector(_BoardConnector):
         name="Workable boards",
         source_type="ATS job board API",
         docs_url="https://dev.to/zsevic/integration-with-workable-public-jobs-api-3nk4",
-        endpoint="https://www.workable.com/api/accounts/{slug}?details=true",
+        endpoint="https://apply.workable.com/api/v1/widget/accounts/{slug}?details=true",
         rate_limit="Not published (app: 2s spacing, cached 3h)",
         coverage="Any company using Workable",
         filters="details=true",
         terms="Public account feed used by Workable career widgets. Community-documented, not an official API.",
         min_interval_s=2,
         cache_ttl_s=3 * 3600,
-        verification="Community documentation reviewed 2026-10-27; not officially documented by Workable",
+        verification="Widget feed verified live 2026-10-31 (the older www.workable.com/api/accounts path now redirects)",
         attribution="Company careers page (Workable)",
     )
 
     async def fetch_board(self, ctx, board):
         data = await ctx.http.get_json(
-            f"https://www.workable.com/api/accounts/{board['token']}",
+            f"https://apply.workable.com/api/v1/widget/accounts/{board['token']}",
             params={"details": "true"},
             cache_ttl=self.meta.cache_ttl_s,
         )
